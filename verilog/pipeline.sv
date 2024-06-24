@@ -17,16 +17,16 @@
 
 module pipeline (
 
-	input         clock,                    // System clock
-	input         reset,                    // System reset
-	input [3:0]   mem2proc_response,        // Tag from memory about current request
-	input [63:0]  mem2proc_data,            // Data coming back from memory
-	input [3:0]   mem2proc_tag,              // Tag from memory about current reply
+	input         clock,                        // System clock
+	input         reset,                        // System reset
+	input [3:0]   mem2proc_response,            // Tag from memory about current request
+	input [63:0]  mem2proc_data,                // Data coming back from memory
+	input [3:0]   mem2proc_tag,                 // Tag from memory about current reply
 	
-	output logic [1:0]  proc2mem_command,    // command sent to memory
-	output logic [`XLEN-1:0] proc2mem_addr,      // Address sent to memory
-	output logic [63:0] proc2mem_data,      // Data sent to memory
-	output MEM_SIZE proc2mem_size,          // data size sent to memory
+	output logic [1:0]  proc2mem_command,       // command sent to memory
+	output logic [`XLEN-1:0] proc2mem_addr,     // Address sent to memory
+	output logic [63:0] proc2mem_data,          // Data sent to memory
+	output MEM_SIZE proc2mem_size,              // data size sent to memory
 
 	output logic [3:0]  pipeline_completed_insts,
 	output EXCEPTION_CODE   pipeline_error_status,
@@ -43,32 +43,31 @@ module pipeline (
 	
 	// Outputs from IF-Stage 
 	output logic [`XLEN-1:0] if_NPC_out,
-	output logic [31:0] if_IR_out,
-	output logic        if_valid_inst_out,
+	output logic [31:0]      if_IR_out,
+	output logic             if_valid_inst_out,
 	
 	// Outputs from IF/ID Pipeline Register
 	output logic [`XLEN-1:0] if_id_NPC,
-	output logic [31:0] if_id_IR,
-	output logic        if_id_valid_inst,
+	output logic [31:0]      if_id_IR,
+	output logic             if_id_valid_inst,
 	
 	
 	// Outputs from ID/EX Pipeline Register
 	output logic [`XLEN-1:0] id_ex_NPC,
-	output logic [31:0] id_ex_IR,
-	output logic        id_ex_valid_inst,
+	output logic [31:0]      id_ex_IR,
+	output logic             id_ex_valid_inst,
 	
 	
 	// Outputs from EX/MEM Pipeline Register
 	output logic [`XLEN-1:0] ex_mem_NPC,
-	output logic [31:0] ex_mem_IR,
-	output logic        ex_mem_valid_inst,
+	output logic [31:0]      ex_mem_IR,
+	output logic             ex_mem_valid_inst,
 	
 	
 	// Outputs from MEM/WB Pipeline Register
 	output logic [`XLEN-1:0] mem_wb_NPC,
-	output logic [31:0] mem_wb_IR,
-	output logic        mem_wb_valid_inst
-
+	output logic [31:0]      mem_wb_IR,
+	output logic             mem_wb_valid_inst
 );
 
 	// Pipeline register enables
@@ -147,7 +146,6 @@ module pipeline (
 		// Inputs
 		.clock (clock),
 		.reset (reset),
-		.mem_wb_valid_inst(mem_wb_valid_inst),
 		.ex_mem_take_branch(ex_mem_packet.take_branch),
 		.ex_mem_target_pc(ex_mem_packet.alu_result),
 		.Imem2proc_data(mem2proc_data),
