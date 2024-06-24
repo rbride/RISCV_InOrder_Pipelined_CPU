@@ -15,15 +15,15 @@
 `include "ISA.svh"
 
 module regfile(
-        input   [4:0] rda_idx, rdb_idx, wr_idx,    // read/write index
-        input  [`XLEN-1:0] wr_data,            // write data
+        input   [4:0] rda_idx, rdb_idx, wr_idx,     // read/write index
+        input  [`XLEN-1:0] wr_data,                 // write data
         input         wr_en, wr_clk,
 
-        output logic [`XLEN-1:0] rda_out, rdb_out    // read data
+        output logic [`XLEN-1:0] rda_out, rdb_out   // read data
           
       );
   
-  logic    [31:0] [`XLEN-1:0] registers;   // 32, 64-bit Registers
+  logic    [31:0] [`XLEN-1:0] registers;            // 32, 64-bit Registers
 
   wire   [`XLEN-1:0] rda_reg = registers[rda_idx];
   wire   [`XLEN-1:0] rdb_reg = registers[rdb_idx];

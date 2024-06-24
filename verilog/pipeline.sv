@@ -232,12 +232,12 @@ module pipeline (
 				1'b0, //csr_op
 				1'b0 //valid
 			}; 
-		end else begin // if (reset)
+		end else begin 
 			if (id_ex_enable) begin
 				id_ex_packet <= `SD id_packet;
-			end // if
-		end // else: !if(reset)
-	end // always
+			end 
+		end 
+	end
 
 
 //////////////////////////////////////////////////

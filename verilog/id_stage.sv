@@ -13,6 +13,12 @@
 `include "ISA.svh"
 `include "sys_defs.svh"
 
+typedef enum logic [1:0] {
+    R_TYPE = 2'b00,     // 2 Src Regs  All Rtype can be treated as .r in the packet
+    I_TYPE = 2'b01,     // 1 Src Reg   All can be .i
+    S_TYPE = 2'b10,     // 2 Src Regs  All can be .s for ease 
+    U_TYPE = 2'b11      // 0 Src Regs  Doesn't even matter 
+} Inst_Type;
 
   // Decode an instruction: given instruction bits IR produce the
   // appropriate datapath control signals.
@@ -21,27 +27,28 @@
   //
 module decoder(
 
-	//input [31:0] inst,
-	//input valid_inst_in,  // ignore inst when low, outputs will
-	                      // reflect noop (except valid_inst)
+	//input valid_inst_in,              // ignore inst when low, outputs will
+	                                    // reflect noop (except valid_inst)
 	//see sys_defs.svh for definition
 	input IF_ID_PACKET if_packet,
 	
+    // Used in Hazard control
+    output logic [1:0]  in_type         // 00: R_Type, 01: I_Type, 10: S_Type, 11: U_Type
+
 	output ALU_OPA_SELECT opa_select,
 	output ALU_OPB_SELECT opb_select,
-	output DEST_REG_SEL   dest_reg, // mux selects
+	output DEST_REG_SEL   dest_reg,     // mux selects
 	output ALU_FUNC       alu_func,
 	output logic rd_mem, wr_mem, cond_branch, uncond_branch,
 	output logic csr_op,    // used for CSR operations, we only used this as 
-	                        //a cheap way to get the return code out
+	                        // a cheap way to get the return code out
 	output logic halt,      // non-zero on a halt
-	output logic illegal,    // non-zero on an illegal instruction
-	output logic valid_inst  // for counting valid instructions executed
+	output logic illegal,   // non-zero on an illegal instruction
+	output logic valid_inst // for counting valid instructions executed
 	                        // and for making the fetch stage die on halts/
 	                        // keeping track of when to allow the next
 	                        // instruction out of fetch
 	                        // 0 for HALT and illegal instructions (die on halt)
-
 );
 
 	INST inst;
@@ -69,165 +76,262 @@ module decoder(
 		uncond_branch = `FALSE;
 		halt = `FALSE;
 		illegal = `FALSE;
+        in_type = 2'b00;
 		if(valid_inst_in) begin
 			casez (inst) 
 				`RV32_LUI: begin
 					dest_reg   = DEST_RD;
 					opa_select = OPA_IS_ZERO;
 					opb_select = OPB_IS_U_IMM;
+                    in_type    = U_TYPE;
 				end
 				`RV32_AUIPC: begin
 					dest_reg   = DEST_RD;
 					opa_select = OPA_IS_PC;
 					opb_select = OPB_IS_U_IMM;
+                    in_type    = U_TYPE;
 				end
 				`RV32_JAL: begin
 					dest_reg      = DEST_RD;
 					opa_select    = OPA_IS_PC;
 					opb_select    = OPB_IS_J_IMM;
 					uncond_branch = `TRUE;
+                    in_type       = U_TYPE;
 				end
 				`RV32_JALR: begin
 					dest_reg      = DEST_RD;
 					opa_select    = OPA_IS_RS1;
 					opb_select    = OPB_IS_I_IMM;
 					uncond_branch = `TRUE;
+                    in_type       = I_TYPE;
 				end
 				`RV32_BEQ, `RV32_BNE, `RV32_BLT, `RV32_BGE,
 				`RV32_BLTU, `RV32_BGEU: begin
 					opa_select  = OPA_IS_PC;
 					opb_select  = OPB_IS_B_IMM;
 					cond_branch = `TRUE;
+                    in_type     = S_TYPE;
 				end
 				`RV32_LB, `RV32_LH, `RV32_LW,
 				`RV32_LBU, `RV32_LHU: begin
 					dest_reg   = DEST_RD;
 					opb_select = OPB_IS_I_IMM;
 					rd_mem     = `TRUE;
+                    in_type    = I_TYPE;
 				end
 				`RV32_SB, `RV32_SH, `RV32_SW: begin
 					opb_select = OPB_IS_S_IMM;
 					wr_mem     = `TRUE;
+                    in_type    = S_TYPE;
 				end
 				`RV32_ADDI: begin
 					dest_reg   = DEST_RD;
 					opb_select = OPB_IS_I_IMM;
+                    in_type     = I_TYPE;
 				end
 				`RV32_SLTI: begin
 					dest_reg   = DEST_RD;
 					opb_select = OPB_IS_I_IMM;
 					alu_func   = ALU_SLT;
+                    in_type    = I_TYPE;
 				end
 				`RV32_SLTIU: begin
 					dest_reg   = DEST_RD;
 					opb_select = OPB_IS_I_IMM;
 					alu_func   = ALU_SLTU;
+                    in_type    = I_TYPE;
 				end
 				`RV32_ANDI: begin
 					dest_reg   = DEST_RD;
 					opb_select = OPB_IS_I_IMM;
 					alu_func   = ALU_AND;
+                    in_type    = I_TYPE;
 				end
 				`RV32_ORI: begin
 					dest_reg   = DEST_RD;
 					opb_select = OPB_IS_I_IMM;
 					alu_func   = ALU_OR;
+                    in_type    = I_TYPE;
 				end
 				`RV32_XORI: begin
 					dest_reg   = DEST_RD;
 					opb_select = OPB_IS_I_IMM;
 					alu_func   = ALU_XOR;
+                    in_type    = I_TYPE;
 				end
 				`RV32_SLLI: begin
 					dest_reg   = DEST_RD;
 					opb_select = OPB_IS_I_IMM;
 					alu_func   = ALU_SLL;
+                    in_type    = R_TYPE;
 				end
 				`RV32_SRLI: begin
 					dest_reg   = DEST_RD;
 					opb_select = OPB_IS_I_IMM;
 					alu_func   = ALU_SRL;
+                    in_type    = R_TYPE;
 				end
 				`RV32_SRAI: begin
 					dest_reg   = DEST_RD;
 					opb_select = OPB_IS_I_IMM;
 					alu_func   = ALU_SRA;
+                    in_type    = R_TYPE;
 				end
 				`RV32_ADD: begin
 					dest_reg   = DEST_RD;
+                    in_type    = R_TYPE;
 				end
 				`RV32_SUB: begin
 					dest_reg   = DEST_RD;
 					alu_func   = ALU_SUB;
+                    in_type    = R_TYPE;
 				end
 				`RV32_SLT: begin
 					dest_reg   = DEST_RD;
 					alu_func   = ALU_SLT;
+                    in_type    = R_TYPE;
 				end
 				`RV32_SLTU: begin
 					dest_reg   = DEST_RD;
 					alu_func   = ALU_SLTU;
+                    in_type    = R_TYPE;
 				end
 				`RV32_AND: begin
 					dest_reg   = DEST_RD;
 					alu_func   = ALU_AND;
+                    in_type    = R_TYPE;
 				end
 				`RV32_OR: begin
 					dest_reg   = DEST_RD;
 					alu_func   = ALU_OR;
+                    in_type    = R_TYPE;
 				end
 				`RV32_XOR: begin
 					dest_reg   = DEST_RD;
 					alu_func   = ALU_XOR;
+                    in_type    = R_TYPE;
 				end
 				`RV32_SLL: begin
 					dest_reg   = DEST_RD;
 					alu_func   = ALU_SLL;
+                    in_type    = R_TYPE;
 				end
 				`RV32_SRL: begin
 					dest_reg   = DEST_RD;
 					alu_func   = ALU_SRL;
+                    in_type    = R_TYPE;
 				end
 				`RV32_SRA: begin
 					dest_reg   = DEST_RD;
 					alu_func   = ALU_SRA;
+                    in_type    = R_TYPE;
 				end
 				`RV32_MUL: begin
 					dest_reg   = DEST_RD;
 					alu_func   = ALU_MUL;
+                    in_type    = R_TYPE;
 				end
 				`RV32_MULH: begin
 					dest_reg   = DEST_RD;
 					alu_func   = ALU_MULH;
+                    in_type    = R_TYPE;
 				end
 				`RV32_MULHSU: begin
 					dest_reg   = DEST_RD;
 					alu_func   = ALU_MULHSU;
+                    in_type    = R_TYPE;
 				end
 				`RV32_MULHU: begin
 					dest_reg   = DEST_RD;
 					alu_func   = ALU_MULHU;
+                    in_type    = R_TYPE;
 				end
 				`RV32_CSRRW, `RV32_CSRRS, `RV32_CSRRC: begin
 					csr_op = `TRUE;
+                    in_type    = I_TYPE;
 				end
 				`WFI: begin
 					halt = `TRUE;
 				end
 				default: illegal = `TRUE;
 
-		endcase // casez (inst)
-		end // if(valid_inst_in)
-	end // always
+		endcase 
+		end
+	end 
 endmodule // decoder
+
+//////////////////////////////////////////////////
+//              Hazard-Control                  //
+//////////////////////////////////////////////////
+module hazard_ctrl(
+	input IF_ID_PACKET if_packet,
+    input [4:0] id_ex_inst_dest,        
+    input [4:0] ex_mem_inst_dest,
+    input [4:0] mem_wb_inst_dest,
+    input [1:0] in_type,                //     R_TYPE = 2'b00,  2 Src Regs All  can be .r 
+                                        //     I_TYPE = 2'b01,  1 Src Reg  All can be .i
+                                        //     S_TYPE = 2'b10,  2 Src Regs All can be .s 
+                                        //     U_TYPE = 2'b11,  0 Src Regs Doesn't even matter            
+    input       is_load_inst
+);
+
+    //Because WAR and WAW impossible in this simple processor only need to concern with structural and branch
+    //Hazards. So as of now since I have not dealt with branches yet the current things to take care of are
+    //Forward output of Mux in Wb stage into next Stage Mux
+    //Forward EX/MEM output into ALU input
+    //SW hazard wait for load to finish
+    always_comb begin
+        case(in_type) 
+            R_TYPE : begin
+                /* Ex opA mux Effects, All items are seperate if statements because mutually exclusive      */
+                /* so evaluate in parallel no in sequence i.e. not via cascade (| for r0 i.e. don't care)   */
+                
+                (|if_packet.inst.r.rs1) begin 
+                    //Reg A is computed in the instruction that proceeds this in the pipeline
+                    if( if_packet.inst.r.rs1 == id_ex_inst_dest ) begin
+                        
+                    end
+                    //Reg A is computed in the instruction 2 prior to this one this in the pipeline
+                    if( if_packet.inst.r.rs1 == ex_mem_inst_dest ) begin
+                        
+                    end
+   
+                end
+
+                /* Same as above but for Ex opB */
+                (|if_packet.inst.r.rs1) begin 
+                    //Reg B is computed in the instruction that proceeds this in the pipeline
+                    if( if_packet.inst.r.rs1 == id_ex_inst_dest ) begin
+                        
+                    end
+                    //Reg A is computed in the instruction 2  this in the pipeline
+
+
+
+                end
+            end //  R_Type 
+            I_TYPE : 
+
+            S_TYPE : 
+
+            U_TYPE :
+
+        endcase
+
+    end
+
+endmodule // hazard_ctrl
 
 
 module id_stage(         
-	input         clock,              // system clock
-	input         reset,              // system reset
-	input         wb_reg_wr_en_out,    // Reg write enable from WB Stage
-	input  [4:0] wb_reg_wr_idx_out,  // Reg write index from WB Stage
+	input         clock,                    // system clock
+	input         reset,                    // system reset
+	input         wb_reg_wr_en_out,         // Reg write enable from WB Stage
+	input  [4:0] wb_reg_wr_idx_out,         // Reg write index from WB Stage
 	input  [`XLEN-1:0] wb_reg_wr_data_out,  // Reg write data from WB Stage
+    input  [4:0] ID_EX_Inst_Dest,           // The dest register of Inst Stored in ID/EX
+    input  [4:0] EX_MEM_Inst_Dest,          // The dest register of Inst Stored in EX/MEM  
+    input  [4:0] Mem_WB_Inst_Dest,          // The dest register of Inst Stored in MEM/WB
 	input  IF_ID_PACKET if_id_packet_in,
 	
 	output ID_EX_PACKET id_packet_out
@@ -269,6 +373,16 @@ module id_stage(
 		.illegal(id_packet_out.illegal),
 		.valid_inst(id_packet_out.valid)
 	);
+    
+    // instantiate the hazard control unit 
+    hazard_ctrl hazard_0 (
+        .if_packet(if_id_packet_in),	 
+        .id_ex_inst_dest(ID_EX_Inst_Dest),
+        .ex_mem_inst_dest(EX_MEM_Inst_Dest),
+        .mem_wb_inst_dest(Mem_WB_Inst_Dest),
+        .is_load_inst(id_packet_out.rd_mem),
+
+    );
 
 	// mux to generate dest_reg_idx based on
 	// the dest_reg_select output from decoder
