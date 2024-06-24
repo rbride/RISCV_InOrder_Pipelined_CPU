@@ -15,8 +15,6 @@
 module if_stage(
 	input         clock,                        // system clock
 	input         reset,                        // system reset
-	input         mem_wb_valid_inst,            // only go to next instruction when true
-	                                            // makes pipeline behave as single-cycle
 	input         ex_mem_take_branch,           // taken-branch signal
 	input  [`XLEN-1:0] ex_mem_target_pc,        // target pc: use if take_branch is TRUE
 	input  [63:0] Imem2proc_data,               // Data coming back from instruction-memory
