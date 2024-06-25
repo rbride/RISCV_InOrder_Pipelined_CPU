@@ -10,7 +10,7 @@
 # make clean    <- remove files created during compilations and sim creation as well as runs.
 #
 
-SOURCE = test_progs/rv32_fib_rec.s
+SOURCE = test_progs/rv32_copy.s
 
 CRT = crt.s
 LINKERS = linker.lds
